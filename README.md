@@ -1,66 +1,59 @@
 # 🏦 Customer Churn Prediction
 
-### End-to-End Machine Learning | Feature Engineering | Custom Imputation | Model Optimization
+### End-to-End Machine Learning | Custom Imputation | Feature Engineering | Model Optimization
 
 An end-to-end machine learning project for predicting customer churn using **data-driven preprocessing, custom imputation, feature engineering, ensemble modelling, and hyperparameter optimization**.
 
-The project goes beyond a basic classification workflow by experimenting with multiple algorithms and specifically tuning **LightGBM, XGBoost, and CatBoost**.
+The project goes beyond a basic classification workflow by benchmarking multiple algorithms and tuning **LightGBM, XGBoost, SVC, and CatBoost**.
 
 ---
 
 ## 🚀 Highlights
 
 * 📊 90,000 customer records
-* 🔍 Comprehensive EDA and data-quality analysis
-* 🧹 Custom, distribution-aware imputation
+* 🔍 Exploratory Data Analysis & data-quality analysis
+* 🧹 Custom distribution-aware imputation
 * ⭐ Domain-driven feature engineering
 * ⚖️ Class-imbalance handling
-* 🔄 Stratified train-validation split
-* ⚙️ Scikit-learn `Pipeline` + `ColumnTransformer`
-* 🤖 9 baseline classification models
-* 🎯 F1-focused model evaluation
+* ⚙️ `Pipeline` + `ColumnTransformer`
+* 🤖 9 baseline models
+* 🎯 F1-focused evaluation
 * 🔎 5-fold `RandomizedSearchCV`
 * ⚡ LightGBM & XGBoost optimization
 * 🐈 CatBoost with native categorical features
-* 🏁 Final model retrained on 100% of the training data
+* 🏁 Final model retrained on the complete training dataset
 
 ---
 
-# 📌 Problem Statement
+## 📌 Problem Statement
 
-The objective is to predict whether a customer will **exit/churn** based on demographic, financial, account, and engagement-related information.
+Predict whether a customer will **churn/exit** based on demographic, financial, account, and engagement-related information.
 
 **Target:** `exit_status`
 
-This is a binary classification problem with an imbalanced target, making **F1-score** particularly important during model selection.
+Because the target is imbalanced, **F1-score** is used as the primary model-selection metric.
 
 ---
 
-# 📊 Dataset
+## 📊 Dataset
 
-The training dataset contains:
+| Property         |                 Value |
+| ---------------- | --------------------: |
+| Training Samples |                90,000 |
+| Features         |   14 original columns |
+| Problem          | Binary Classification |
+| Target           |         `exit_status` |
 
-| Property |                 Value |
-| -------- | --------------------: |
-| Rows     |                90,000 |
-| Columns  |                    14 |
-| Problem  | Binary Classification |
-| Target   |         `exit_status` |
-
-Features include:
-
-`credit_score`, `country`, `gender`, `age`, `tenure`, `acc_balance`, `prod_count`, `has_card`, and `is_active`.
+Features include credit score, country, gender, age, tenure, account balance, product count, card ownership, activity, and salary.
 
 ---
 
-# 🔄 Machine Learning Workflow
+# 🔄 Workflow
 
 ```text
 Raw Data
    ↓
-Data Understanding & EDA
-   ↓
-Data Quality Checks
+EDA & Data Quality
    ↓
 Custom Imputation
    ↓
@@ -70,11 +63,11 @@ Stratified Train/Validation Split
    ↓
 Preprocessing Pipeline
    ↓
-Baseline Model Benchmarking
+Baseline Benchmarking
    ↓
 Hyperparameter Optimization
    ↓
-LightGBM vs XGBoost vs CatBoost
+LightGBM / XGBoost / CatBoost
    ↓
 Full-Data Retraining
    ↓
@@ -83,129 +76,68 @@ Final Predictions
 
 ---
 
-# 🧹 Data Cleaning & Custom Imputation
+# 🧹 Custom Data Preprocessing
 
-Instead of applying a single generic imputation strategy, different techniques are used according to the behaviour of each feature.
+A major focus of this project is **feature-specific imputation** rather than applying one generic strategy.
 
-### `credit_score`
+### Country — Proportional Imputation
 
-Missing values → **Mean Imputation**
+Missing `country` values are filled by randomly sampling according to the existing category distribution rather than assigning every missing value to the mode.
 
-### `prod_count`
-
-Missing values → **Most-Frequent Imputation**
-
-### `country`
-
-A custom **proportional random imputation** method is implemented.
-
-Instead of replacing every missing country with the mode, missing values are sampled according to the observed category distribution.
+Resulting distribution:
 
 ```text
-Observed Distribution
-        ↓
-Category Probabilities
-        ↓
-Random Sampling
-        ↓
-Imputed Country
+France     57.12%
+Spain      21.98%
+Germany    20.91%
 ```
 
-### `acc_balance`
+### Account Balance — Zero-Inflated Imputation
 
-Account balance is **zero-inflated**, so a custom strategy is used:
+`acc_balance` contains a significant number of zero values. A custom strategy preserves the observed probability of zero while sampling non-zero values from the observed distribution.
 
-* Estimate the probability of zero balance.
-* Preserve the observed non-zero distribution.
-* Generate missing values using these learned characteristics.
-
-This avoids blindly replacing missing balances with the mean/median.
+This helps maintain the underlying structure of the feature.
 
 ---
 
 # ⭐ Feature Engineering
 
-Several domain-driven features are created to capture relationships that may not be obvious from the raw columns.
+The project creates several domain-driven features:
 
-| Feature                  | Purpose                                                 |
-| ------------------------ | ------------------------------------------------------- |
-| `zero_balance_flag`      | Identifies customers with zero account balance          |
-| `is_senior_risk`         | Captures a specific age-based risk segment              |
-| `engagement_score`       | Combines card ownership and activity                    |
-| `inactive_with_products` | Identifies inactive customers holding multiple products |
-| `germany_female`         | Captures country × gender interaction                   |
-| `tenure_per_age`         | Normalizes tenure relative to age                       |
-| `products_per_tenure`    | Measures product ownership relative to tenure           |
+| Feature                  | Purpose                                           |
+| ------------------------ | ------------------------------------------------- |
+| `zero_balance_flag`      | Identifies zero-balance customers                 |
+| `is_senior_risk`         | Captures an age-based segment                     |
+| `engagement_score`       | Combines card ownership and activity              |
+| `inactive_with_products` | Detects inactive customers with multiple products |
+| `germany_female`         | Country × gender interaction                      |
+| `tenure_per_age`         | Tenure relative to age                            |
+| `products_per_tenure`    | Products relative to tenure                       |
 
-The feature engineering logic is encapsulated inside a reusable function and applied consistently to both training and test data.
-
----
-
-# ⚙️ Preprocessing
-
-The project uses:
-
-* `Pipeline`
-* `ColumnTransformer`
-* `SimpleImputer`
-* `OneHotEncoder`
-* `StandardScaler`
-
-Categorical and numerical features receive separate preprocessing before being passed to the models.
-
-The preprocessing pipeline is fitted only on training data and then applied to validation/test data to avoid inconsistent transformations.
+These features attempt to capture behavioural relationships that may not be directly represented by the raw variables.
 
 ---
 
-# 🤖 Model Benchmarking
+# 🤖 Baseline Model Performance
 
-The following **9 models** are evaluated:
+The initial benchmark produced:
 
-1. Logistic Regression
-2. KNN
-3. SVC
-4. Decision Tree
-5. Random Forest
-6. Extra Trees
-7. Gradient Boosting
-8. LightGBM
-9. XGBoost
+| Model                       |            F1 |       ROC-AUC |      Accuracy |
+| --------------------------- | ------------: | ------------: | ------------: |
+| **LightGBM**                |    **0.6311** |        0.8739 |        0.8197 |
+| XGBoost                     |        0.6250 |        0.8668 |    **0.8214** |
+| SVC                         |        0.6109 |        0.8476 |        0.7937 |
+| Gradient Boosting           |        0.5979 |    **0.8743** |        0.8567 |
+| Decision Tree               |        0.5059 |        0.6866 |        0.7911 |
+| Random/Extra Trees & others | 0.5547–0.5832 | 0.8011–0.8531 | 0.7555–0.8502 |
 
-Each model is evaluated using:
-
-* **F1 Score**
-* **ROC-AUC**
-* **Accuracy**
-
-F1 is used as the primary comparison metric because of the class imbalance.
-
----
-
-# 🏆 Model Performance
-
-### Baseline Models
-
-> **Note:** The current GitHub notebook does not contain saved output values for this table. The code calculates these metrics, but the output cells are empty.
-
-| Model               | F1 | ROC-AUC | Accuracy |
-| ------------------- | -: | ------: | -------: |
-| Logistic Regression |  — |       — |        — |
-| KNN                 |  — |       — |        — |
-| SVC                 |  — |       — |        — |
-| Decision Tree       |  — |       — |        — |
-| Random Forest       |  — |       — |        — |
-| Extra Trees         |  — |       — |        — |
-| Gradient Boosting   |  — |       — |        — |
-| LightGBM            |  — |       — |        — |
-| XGBoost             |  — |       — |        — |
-
-**Primary metric:** F1 Score.
+**Key observation:** LightGBM achieved the highest baseline F1 of **0.6311**.
 
 ---
 
 # 🎯 Hyperparameter Optimization
 
-The strongest boosting approaches are further optimized using:
+The strongest models were further optimized using:
 
 ```text
 RandomizedSearchCV
@@ -215,108 +147,98 @@ RandomizedSearchCV
 F1 Scoring
 ```
 
-### LightGBM
+### Tuned Results
 
-40 random configurations are tested across parameters including:
+| Model           | Best Validation F1 |
+| --------------- | -----------------: |
+| 🥇 **LightGBM** |         **0.6524** |
+| XGBoost         |             0.6522 |
+| CatBoost        |             0.6506 |
+| SVC             |             0.6190 |
 
-* `n_estimators`
-* `learning_rate`
-* `max_depth`
-* `num_leaves`
-* `scale_pos_weight`
-* `subsample`
-* `colsample_bytree`
-* `reg_alpha`
-* `reg_lambda`
-
-### XGBoost
-
-40 configurations are explored across:
-
-* `n_estimators`
-* `learning_rate`
-* `max_depth`
-* `min_child_weight`
-* `subsample`
-* `colsample_bytree`
-* `scale_pos_weight`
-* Regularization parameters
-
-### CatBoost 🐈
-
-The project goes one step further by training **CatBoost with native categorical features** rather than forcing `gender` and `country` through one-hot encoding.
-
-25 configurations are searched across:
-
-* `iterations`
-* `depth`
-* `learning_rate`
-* `l2_leaf_reg`
-* `scale_pos_weight`
-
-All three tuned models are then compared on the same validation set using F1.
+LightGBM improved from **0.6311 → 0.6524 F1** after tuning.
 
 ---
 
-# 🥇 Tuned Model Comparison
+# 🐈 Going Beyond XGBoost & LightGBM — CatBoost
 
-| Model    | Validation F1 |
-| -------- | ------------: |
-| LightGBM |         **—** |
-| XGBoost  |         **—** |
-| CatBoost |         **—** |
+The project also experiments with **CatBoost**, using native categorical handling for:
 
-The notebook compares the three tuned models directly before final model selection.
+```text
+gender
+country
+```
 
-> **Final submission model:** Tuned **LightGBM**, retrained on the complete training dataset before generating `submission.csv`.
+Instead of one-hot encoding these variables, CatBoost receives them as categorical features directly.
+
+Best configuration:
+
+```text
+iterations: 200
+depth: 4
+learning_rate: 0.1
+l2_leaf_reg: 1
+scale_pos_weight: 2
+```
+
+Best validation F1:
+
+```text
+0.6506
+```
+
+This provides an additional comparison against the tuned LightGBM and XGBoost models.
+
+---
+
+# 🏆 Final Model Comparison
+
+After fitting the tuned estimators on the validation workflow:
+
+| Model        | Validation F1 |
+| ------------ | ------------: |
+| **LightGBM** |    **0.6381** |
+| CatBoost     |        0.6373 |
+| XGBoost      |        0.6371 |
+
+The project proceeds with the tuned **LightGBM** model and retrains it on **100% of the labelled training data** before generating the final test predictions.
 
 ---
 
 # 💡 Why This Project Stands Out
 
-### 1. Custom Imputation
+### Custom Imputation
 
-Missing values are handled according to the statistical behaviour of each feature instead of using one generic method.
+Uses distribution-aware strategies instead of blindly applying mean/mode imputation.
 
-### 2. Feature Engineering
+### Feature Engineering
 
-Raw customer attributes are transformed into behavioural, interaction, and ratio-based features.
+Creates behavioural, interaction, and ratio-based features from the original customer attributes.
 
-### 3. Multiple Models
+### Extensive Benchmarking
 
-The project benchmarks nine different classification approaches before optimization.
+Nine different classification algorithms are evaluated before optimization.
 
-### 4. Going Beyond XGBoost & LightGBM
+### Advanced Boosting
 
-**CatBoost** is additionally trained with native categorical feature support.
+LightGBM, XGBoost, and CatBoost are all tuned and compared.
 
-### 5. Proper Validation
+### Native Categorical Modelling
 
-Stratified splitting and 5-fold cross-validation are used to make model comparison more robust.
+CatBoost is given a dedicated preprocessing pipeline to exploit its native categorical feature handling.
 
-### 6. Full-Data Retraining
+### Robust Validation
 
-The final LightGBM model is retrained using **100% of the available labelled training data** before producing the final submission.
+Uses stratified splitting and 5-fold cross-validation with F1 as the optimization metric.
 
 ---
 
 # 🛠️ Tech Stack
 
-**Languages & Libraries**
+**Python · Pandas · NumPy · Matplotlib · Seaborn · Scikit-learn · LightGBM · XGBoost · CatBoost**
 
-* Python
-* Pandas
-* NumPy
-* Matplotlib
-* Seaborn
-* Scikit-learn
-* LightGBM
-* XGBoost
-* CatBoost
-
-**ML Techniques**
-
-`EDA` · `Feature Engineering` · `Custom Imputation` · `Pipelines` · `Class Imbalance` · `Cross-Validation` · `RandomizedSearchCV` · `Ensemble Learning`
+**Techniques:**
+EDA · Custom Imputation · Feature Engineering · Pipelines · Class Imbalance · Cross-Validation · RandomizedSearchCV · Ensemble Learning
 
 ---
 
@@ -339,20 +261,18 @@ cd Customer-churn-prediction
 jupyter notebook customer_churn_prediction.ipynb
 ```
 
-The notebook was developed in a Kaggle environment and currently expects the competition dataset through the Kaggle input path.
+The notebook was developed using a Kaggle dataset/environment, so local execution requires updating the dataset paths.
 
 ---
 
-# 👨‍💻 Author
+## 👨‍💻 Author
 
 **Aayush Kotwani**
 
-Data Science & Machine Learning Enthusiast
+Data Scientist
 
 **Interests:** Machine Learning · Data Science · Deep Learning · Generative AI · Software Development
 
 ---
 
-### ⭐ Key Takeaway
-
-> **The focus of this project is not just training a model — it is building a thoughtful machine learning pipeline where data quality, feature engineering, preprocessing, model selection, and optimization all contribute to the final result.**
+> **The goal of this project was not simply to train a model, but to build a thoughtful ML pipeline where data quality, feature engineering, preprocessing, model selection, and optimization work together to improve churn prediction.**
